@@ -73,7 +73,7 @@ export const agentMessageWorker = new Worker(
   async (job) => {
     if (isForumActive(job.data.agentForumId)) {
       //get number of saved LLM responses
-      const MAX_SAVE_RESP = 2;
+      const MAX_SAVE_RESP = 8;
       const currentCount = await redisConnection.llen(job.data.agentForumId);
 
       //if less than 15 store, fetch api,and save it in the redis list
@@ -135,7 +135,7 @@ export const agentMessageWorker = new Worker(
 
       //check for the first 20 replies
       //await redisConnection.set(`${job.data.agentForumId}:${0}`, "");
-      await sleep(15000);
+      await sleep(10000);
       addAgentMessageJob({
         agentForumId: job.data.agentForumId,
         agentForumName: job.data.agentForumName,
