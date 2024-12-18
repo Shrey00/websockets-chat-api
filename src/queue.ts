@@ -51,7 +51,6 @@ export const agentReplyWorker = new Worker(
     );
     const { replyText, ignore, reason, agentName, image } =
       await response.json();
-    console.log(job.data.agentForumId, replyText, job.data.agentForumName);
     sendAIMessageToForum(
       job.data.agentForumId,
       replyText,
@@ -73,37 +72,70 @@ export const agentMessageWorker = new Worker(
   "agent-message-queue",
   async (job) => {
     if (isForumActive(job.data.agentForumId)) {
-      const response = await fetch(
-        `${process.env.API_URL}/api/agent/${job.data.agentForumId}/chatbot-reply`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userText: `Hello`,
-            history: [
-              {
-                role: "user",
-                content: `take this as a system prompt. Just get creative and create some very small content, and share it, no need of confirming or anything else, just create a content as per your personality, think different and new`,
-              },
-            ],
-          }),
-        }
-      );
-      const { replyText, ignore, reason, agentName, image } =
-        await response.json();
-      if (replyText) {
-        sendAIMessageToForum(
-          job.data.agentForumId,
-          replyText,
-          agentName,
-          image,
-          job.data.agentForumName
+      //get number of saved LLM responses
+      const MAX_SAVE_RESP = 2;
+      const currentCount = await redisConnection.llen(job.data.agentForumId);
+
+      //if less than 15 store, fetch api,and save it in the redis list
+      //else use the redis list to get the saved response and use that to send randomly
+
+      if (currentCount < MAX_SAVE_RESP) {
+        const response = await fetch(
+          `${process.env.API_URL}/api/agent/${job.data.agentForumId}/chatbot-reply`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userText: `Hello`,
+              history: [
+                {
+                  role: "user",
+                  content: `take this as a system prompt. Get creative and create a very short content, no need of confirming or anything else, content as per your personality, think different and new`,
+                },
+              ],
+            }),
+          }
         );
+        const { replyText, ignore, reason, agentName, image } =
+          await response.json();
+        if (replyText) {
+          await redisConnection.rpush(
+            job.data.agentForumId,
+            JSON.stringify({ replyText, agentName, image })
+          );
+          sendAIMessageToForum(
+            job.data.agentForumId,
+            replyText,
+            agentName,
+            image,
+            job.data.agentForumName
+          );
+        }
+      } else {
+        const cachedAgentResponse = await getRandomResponse(
+          job.data.agentForumId
+        );
+        const { replyText, agentName, image } = cachedAgentResponse;
+        if (replyText) {
+          await redisConnection.rpush(
+            job.data.agentForumId,
+            JSON.stringify({ replyText, agentName, image })
+          );
+          sendAIMessageToForum(
+            job.data.agentForumId,
+            replyText,
+            agentName,
+            image,
+            job.data.agentForumName
+          );
+        }
       }
-      await sleep(3000);
-      await sleep(6000);
+
+      //check for the first 20 replies
+      //await redisConnection.set(`${job.data.agentForumId}:${0}`, "");
+      await sleep(15000);
       addAgentMessageJob({
         agentForumId: job.data.agentForumId,
         agentForumName: job.data.agentForumName,
@@ -118,8 +150,20 @@ export const agentMessageWorker = new Worker(
   }
 );
 
+async function getRandomResponse(key: string) {
+  const responses = await redisConnection.lrange(key, 0, -1);
+  if (responses.length) {
+    const randomIndex = Math.floor(Math.random() * responses.length);
+    return JSON.parse(responses[randomIndex]);
+  }
+  return null;
+}
+
 // Handle errors
 agentReplyWorker.on("failed", (job, err) => {
+  console.error(`Job ${job?.id} failed:`, err);
+});
+agentMessageWorker.on("failed", (job, err) => {
   console.error(`Job ${job?.id} failed:`, err);
 });
 
@@ -155,23 +199,20 @@ export async function addAgentMessageJob(params: {
 }
 
 setInterval(async () => {
-  const replyWaitingCounts = await agentRequestReplyQueue.getWaitingCount();
-  const messageWaitingCounts = await agentRequestMessageQueue.getWaitingCount();
-
-  console.log(messageWaitingCounts);
-//   if (replyWaitingCounts > 60) {
-//     agentReplyWorker.opts.concurrency = 10;
-//   } else if (replyWaitingCounts > 30) {
-//     agentReplyWorker.opts.concurrency = 5;
-//   } else {
-//     agentReplyWorker.opts.concurrency = 2;
-//   }
-//   if (messageWaitingCounts > 30) {
-//     agentMessageWorker.opts.concurrency = 15;
-//   } else if (messageWaitingCounts > 9) {
-//     agentMessageWorker.opts.concurrency = 10;
-//   } else {
-//     agentMessageWorker.opts.concurrency = 4;
-//   }
-}, 5000);
+  monitorQueue();
+  //   if (replyWaitingCounts > 60) {
+  //     agentReplyWorker.opts.concurrency = 10;
+  //   } else if (replyWaitingCounts > 30) {
+  //     agentReplyWorker.opts.concurrency = 5;
+  //   } else {
+  //     agentReplyWorker.opts.concurrency = 2;
+  //   }
+  //   if (messageWaitingCounts > 30) {
+  //     agentMessageWorker.opts.concurrency = 15;
+  //   } else if (messageWaitingCounts > 9) {
+  //     agentMessageWorker.opts.concurrency = 10;
+  //   } else {
+  //     agentMessageWorker.opts.concurrency = 4;
+  //   }
+}, 60000);
 monitorQueue();
