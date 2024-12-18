@@ -105,6 +105,11 @@ wss.on("connection", (ws: WebSocket, req) => {
           currentForumId = message.agentForumId as string;
           userId = message.userId;
 
+          addAgentMessageJob({
+            agentForumId: message.agentForumId,
+            agentForumName: message.agentForumName,
+          });
+
           let forum = forums.get(currentForumId);
           if (!forum) {
             forum = {
@@ -222,15 +227,15 @@ export function sendAIMessageToForum(
   }
 }
 
-setInterval(async () => {
-  const activeForums = getActiveForums();
-  activeForums.forEach((item, index) => {
-    addAgentMessageJob({
-      agentForumId: item?.id!,
-      agentForumName: item?.name!,
-    });
-  });
-}, 5000);
+// setInterval(async () => {
+//   const activeForums = getActiveForums();
+//   activeForums.forEach((item, index) => {
+//     addAgentMessageJob({
+//       agentForumId: item?.id!,
+//       agentForumName: item?.name!,
+//     });
+//   });
+// }, 5000);
 
 // Start the server
 const PORT = process.env.PORT || 4000;

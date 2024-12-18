@@ -5,10 +5,12 @@ import IORedis from "ioredis";
 import { Queue } from "bullmq";
 import { sendAIMessageToForum } from "./index";
 import { isForumActive } from "./index";
-const redisConnection = new IORedis({
-  host: "localhost",
-  port: 6379,
-});
+import "dotenv/config";
+const { REDIS_HOST, REDIS_PORT, REDIS_USERNAME, REDIS_PASSWORD } = process.env;
+// const redisConnection = new IORedis(
+//   "redis://default:hvLATavBBxaupazMVhwsxXGEwbHpoogf@redis.railway.internal:6379"
+// );
+const redisConnection = new IORedis(process.env.REDIS_PUBLIC_URL!);
 export const agentRequestReplyQueue = new Queue("agent-reply-queue", {
   connection: redisConnection,
 });
@@ -17,17 +19,20 @@ export const agentRequestMessageQueue = new Queue("agent-message-queue", {
 });
 import { Worker } from "bullmq";
 
-// Redis connection options
-const connection = {
-  host: "localhost",
-  port: 6379,
-};
+// Redis
+//  options
+// const connection = {
+//   host: process.env.REDIS_HOST!,
+//   username: process.env.REDIS_USER!,
+//   password: process.env.REDIS_PASSWORD!,
+//   port: 6379,
+// };
 
 export const agentReplyWorker = new Worker(
   "agent-reply-queue",
   async (job) => {
     const response = await fetch(
-      `http://localhost:3000/api/agent/${job.data.agentForumId}/chatbot-reply`,
+      `${process.env.API_URL}/api/agent/${job.data.agentForumId}/chatbot-reply`,
       {
         method: "POST",
         headers: {
@@ -55,7 +60,12 @@ export const agentReplyWorker = new Worker(
       job.data.agentForumName
     );
   },
-  { connection }
+  {
+    connection: {
+      url: process.env.REDIS_PUBLIC_URL!,
+    },
+    concurrency: 5,
+  }
 );
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -64,7 +74,7 @@ export const agentMessageWorker = new Worker(
   async (job) => {
     if (isForumActive(job.data.agentForumId)) {
       const response = await fetch(
-        `http://localhost:3000/api/agent/${job.data.agentForumId}/chatbot-reply`,
+        `${process.env.API_URL}/api/agent/${job.data.agentForumId}/chatbot-reply`,
         {
           method: "POST",
           headers: {
@@ -92,11 +102,20 @@ export const agentMessageWorker = new Worker(
           job.data.agentForumName
         );
       }
-
+      await sleep(3000);
       await sleep(6000);
+      addAgentMessageJob({
+        agentForumId: job.data.agentForumId,
+        agentForumName: job.data.agentForumName,
+      });
     }
   },
-  { connection }
+  {
+    connection: {
+      url: process.env.REDIS_PUBLIC_URL!,
+    },
+    concurrency: 5,
+  }
 );
 
 // Handle errors
@@ -138,19 +157,21 @@ export async function addAgentMessageJob(params: {
 setInterval(async () => {
   const replyWaitingCounts = await agentRequestReplyQueue.getWaitingCount();
   const messageWaitingCounts = await agentRequestMessageQueue.getWaitingCount();
-  if (replyWaitingCounts > 60) {
-    agentReplyWorker.opts.concurrency = 10;
-  } else if (replyWaitingCounts > 30) {
-    agentReplyWorker.opts.concurrency = 5;
-  } else {
-    agentReplyWorker.opts.concurrency = 2;
-  }
-  if (messageWaitingCounts > 60) {
-    agentMessageWorker.opts.concurrency = 10;
-  } else if (messageWaitingCounts > 30) {
-    agentMessageWorker.opts.concurrency = 5;
-  } else {
-    agentMessageWorker.opts.concurrency = 2;
-  }
+
+  console.log(messageWaitingCounts);
+//   if (replyWaitingCounts > 60) {
+//     agentReplyWorker.opts.concurrency = 10;
+//   } else if (replyWaitingCounts > 30) {
+//     agentReplyWorker.opts.concurrency = 5;
+//   } else {
+//     agentReplyWorker.opts.concurrency = 2;
+//   }
+//   if (messageWaitingCounts > 30) {
+//     agentMessageWorker.opts.concurrency = 15;
+//   } else if (messageWaitingCounts > 9) {
+//     agentMessageWorker.opts.concurrency = 10;
+//   } else {
+//     agentMessageWorker.opts.concurrency = 4;
+//   }
 }, 5000);
 monitorQueue();
