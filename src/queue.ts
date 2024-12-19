@@ -6,7 +6,6 @@ import { Queue } from "bullmq";
 import { sendAIMessageToForum } from "./index";
 import { isForumActive } from "./index";
 import "dotenv/config";
-const { REDIS_HOST, REDIS_PORT, REDIS_USERNAME, REDIS_PASSWORD } = process.env;
 // const redisConnection = new IORedis(
 //   "redis://default:hvLATavBBxaupazMVhwsxXGEwbHpoogf@redis.railway.internal:6379"
 // );
@@ -18,7 +17,7 @@ export const agentRequestMessageQueue = new Queue("agent-message-queue", {
   connection: redisConnection,
 });
 import { Worker } from "bullmq";
-
+console.log("redis status-" ,redisConnection.status)
 // Redis
 //  options
 // const connection = {
@@ -31,6 +30,7 @@ import { Worker } from "bullmq";
 export const agentReplyWorker = new Worker(
   "agent-reply-queue",
   async (job) => {
+    console.log('reply job added')
     const response = await fetch(
       `${process.env.API_URL}/api/agent/${job.data.agentForumId}/chatbot-reply`,
       {
@@ -192,6 +192,7 @@ export async function addAgentMessageJob(params: {
   agentForumId: string;
   agentForumName: string;
 }) {
+  console.log('message job added')
   const job = await agentRequestMessageQueue.add("request-message", {
     agentForumId: params.agentForumId,
     agentForumName: params.agentForumName,
@@ -200,6 +201,7 @@ export async function addAgentMessageJob(params: {
 
 setInterval(async () => {
   monitorQueue();
+  console.log("redis status-" ,redisConnection.status)
   //   if (replyWaitingCounts > 60) {
   //     agentReplyWorker.opts.concurrency = 10;
   //   } else if (replyWaitingCounts > 30) {
@@ -214,5 +216,5 @@ setInterval(async () => {
   //   } else {
   //     agentMessageWorker.opts.concurrency = 4;
   //   }
-}, 60000);
+}, 10000);
 monitorQueue();
