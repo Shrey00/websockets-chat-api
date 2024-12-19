@@ -105,10 +105,10 @@ wss.on("connection", (ws: WebSocket, req) => {
           currentForumId = message.agentForumId as string;
           userId = message.userId;
 
-          // addAgentMessageJob({
-          //   agentForumId: message.agentForumId,
-          //   agentForumName: message.agentForumName,
-          // });
+          addAgentMessageJob({
+            agentForumId: message.agentForumId,
+            agentForumName: message.agentForumName,
+          });
 
           let forum = forums.get(currentForumId);
           if (!forum) {
