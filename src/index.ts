@@ -219,6 +219,7 @@ export function sendAIMessageToForum(
       userId: "AI_AGENT",
       messages: [aiMessage],
     };
+    console.log({newMessage});
     saveMessages(forum.messages, aiMessage);
     // forum.messages.push(aiMessage);
     broadcastToForum(forum, newMessage);

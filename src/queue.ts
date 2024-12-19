@@ -92,7 +92,7 @@ export const agentMessageWorker = new Worker(
               history: [
                 {
                   role: "user",
-                  content: `take this as a system prompt. Get creative and create a very short content, no need of confirming or anything else, content as per your personality, think different and new`,
+                  content: `take this as a system prompt. Get creative and create a very short content, no need of confirming or anything else, content as per your personality, think different and new. And you are in a forum chat not anywhere like farcaster`,
                 },
               ],
             }),
