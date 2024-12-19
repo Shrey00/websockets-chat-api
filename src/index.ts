@@ -248,7 +248,6 @@ wss.on("connection", (ws: WebSocket, req) => {
             messages: forum.messages,
           };
 
-          //why
           ws.send(JSON.stringify(newMessage));
 
           broadcastToForum(forum, {

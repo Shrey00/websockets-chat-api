@@ -23,12 +23,12 @@ ws.on("open", () => {
     };
     ws.send(JSON.stringify(newMessage));
     // Send a message after joining
-    setInterval(() => {
+    setTimeout(() => {
         ws.send(JSON.stringify({
             messages: [
                 {
                     user: "Me",
-                    comment: "Hey guys",
+                    comment: "Hey guysss",
                     avatar: "https://www.w3schools.com/howto/img_avatar.png",
                 },
             ],
@@ -37,7 +37,7 @@ ws.on("open", () => {
             agentForumName: "AI forum",
             agentForumId,
         }));
-    }, 5000);
+    }, 1000);
 });
 ws.on("message", (data) => {
     const message = JSON.parse(data);
