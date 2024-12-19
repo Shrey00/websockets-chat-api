@@ -279,12 +279,12 @@ wss.on("connection", (ws: WebSocket, req) => {
               console.log("Text: ", messageContent.comment);
               saveMessages(forum.messages, messageContent);
               broadcastToForum(forum, newMessage);
-              await getReplyFromAgent({
-                user: message.messages[0].user,
-                text: message.messages[0].comment!,
-                agentForumId: message.agentForumId,
-                agentForumName: message.agentForumName,
-              });
+              // await getReplyFromAgent({
+              //   user: message.messages[0].user,
+              //   text: message.messages[0].comment!,
+              //   agentForumId: message.agentForumId,
+              //   agentForumName: message.agentForumName,
+              // });
             }
           }
           break;
@@ -346,16 +346,16 @@ export function sendAIMessageToForum(
   }
 }
 
-setInterval(async () => {
-  const activeForums = getActiveForums();
-  console.log("Agent Message Request");
-  activeForums.forEach(async (item, index) => {
-    await getMessageFromAgent({
-      agentForumId: item?.id!,
-      agentForumName: item?.name!,
-    });
-  });
-}, 15000);
+// setInterval(async () => {
+//   const activeForums = getActiveForums();
+//   console.log("Agent Message Request");
+//   activeForums.forEach(async (item, index) => {
+//     await getMessageFromAgent({
+//       agentForumId: item?.id!,
+//       agentForumName: item?.name!,
+//     });
+//   });
+// }, 15000);
 
 // Start the server
 const PORT = process.env.PORT || 4000;
