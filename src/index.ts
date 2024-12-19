@@ -95,32 +95,37 @@ async function getReplyFromAgent(params: {
   agentForumName: string;
 }) {
   const { user, text, agentForumId, agentForumName } = params;
-  const response = await fetch(
-    `${process.env.API_URL}/api/agent/${agentForumId}/chatbot-reply`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userText: `By: ${user} message: ${text}`,
-        history: [
-          {
-            role: "user",
-            content: `By: ${user} message: ${text}`,
-          },
-        ],
-      }),
-    }
-  );
-  const { replyText, ignore, reason, agentName, image } = await response.json();
-  sendAIMessageToForum(
-    agentForumId,
-    replyText,
-    agentName,
-    image,
-    agentForumName
-  );
+  try {
+    const response = await fetch(
+      `${process.env.API_URL}/api/agent/${agentForumId}/chatbot-reply`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userText: `By: ${user} message: ${text}`,
+          history: [
+            {
+              role: "user",
+              content: `By: ${user} message: ${text}`,
+            },
+          ],
+        }),
+      }
+    );
+    const { replyText, ignore, reason, agentName, image } =
+      await response.json();
+    sendAIMessageToForum(
+      agentForumId,
+      replyText,
+      agentName,
+      image,
+      agentForumName
+    );
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -137,57 +142,60 @@ async function getMessageFromAgent(params: {
 
     //if less than 15 store, fetch api,and save it in the redis list
     //else use the redis list to get the saved response and use that to send randomly
-
-    if (currentCount < MAX_SAVE_RESP) {
-      const response = await fetch(
-        `${process.env.API_URL}/api/agent/${agentForumId}/chatbot-reply`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userText: `Hello`,
-            history: [
-              {
-                role: "user",
-                content: `Get creative and create a very short content, no need of confirming or anything else, content as per your personality, think different and new.`,
-              },
-            ],
-          }),
+    try {
+      if (currentCount < MAX_SAVE_RESP) {
+        const response = await fetch(
+          `${process.env.API_URL}/api/agent/${agentForumId}/chatbot-reply`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userText: `Hello`,
+              history: [
+                {
+                  role: "user",
+                  content: `Get creative and create a very short content, no need of confirming or anything else, content as per your personality, think different and new.`,
+                },
+              ],
+            }),
+          }
+        );
+        const { replyText, ignore, reason, agentName, image } =
+          await response.json();
+        if (replyText) {
+          await redisConnection.rpush(
+            agentForumId,
+            JSON.stringify({ replyText, agentName, image })
+          );
+          sendAIMessageToForum(
+            agentForumId,
+            replyText,
+            agentName,
+            image,
+            agentForumName
+          );
         }
-      );
-      const { replyText, ignore, reason, agentName, image } =
-        await response.json();
-      if (replyText) {
-        await redisConnection.rpush(
-          agentForumId,
-          JSON.stringify({ replyText, agentName, image })
-        );
-        sendAIMessageToForum(
-          agentForumId,
-          replyText,
-          agentName,
-          image,
-          agentForumName
-        );
+      } else {
+        const cachedAgentResponse = await getRandomResponse(agentForumId);
+        const { replyText, agentName, image } = cachedAgentResponse;
+        if (replyText) {
+          await redisConnection.rpush(
+            agentForumId,
+            JSON.stringify({ replyText, agentName, image })
+          );
+          sendAIMessageToForum(
+            agentForumId,
+            replyText,
+            agentName,
+            image,
+            agentForumName
+          );
+        }
       }
-    } else {
-      const cachedAgentResponse = await getRandomResponse(agentForumId);
-      const { replyText, agentName, image } = cachedAgentResponse;
-      if (replyText) {
-        await redisConnection.rpush(
-          agentForumId,
-          JSON.stringify({ replyText, agentName, image })
-        );
-        sendAIMessageToForum(
-          agentForumId,
-          replyText,
-          agentName,
-          image,
-          agentForumName
-        );
-      }
+    } catch (e) {
+      console.log(e);
     }
     await sleep(10000);
   }
@@ -220,6 +228,7 @@ wss.on("connection", (ws: WebSocket, req) => {
           }
           currentForumId = message.agentForumId as string;
           userId = message.userId;
+          console.log({ userId }, "joined");
           let forum = forums.get(currentForumId);
           if (!forum) {
             forum = {
@@ -270,6 +279,7 @@ wss.on("connection", (ws: WebSocket, req) => {
                 agentForumName: message.agentForumName,
                 messages: [messageContent],
               };
+              console.log("Text: ", messageContent.comment);
               saveMessages(forum.messages, messageContent);
               broadcastToForum(forum, newMessage);
               await getReplyFromAgent({
@@ -341,6 +351,7 @@ export function sendAIMessageToForum(
 
 setInterval(async () => {
   const activeForums = getActiveForums();
+  console.log("Agent Message Request");
   activeForums.forEach(async (item, index) => {
     await getMessageFromAgent({
       agentForumId: item?.id!,
