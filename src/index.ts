@@ -2,10 +2,8 @@ import WebSocket from "ws";
 import http from "http";
 import { v4 as uuidv4 } from "uuid";
 import IORedis from "ioredis";
-import { Queue } from "bullmq";
 import url from "url";
 import "dotenv/config";
-import { addAgentMessageJob, addAgentReplyJob } from "./queue";
 // Types
 // interface Message {
 //   id: string;
