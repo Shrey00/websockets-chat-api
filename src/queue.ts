@@ -63,7 +63,7 @@ export const agentReplyWorker = new Worker(
     connection: {
       url: process.env.REDIS_PUBLIC_URL!,
     },
-    concurrency: 5,
+    concurrency: 1,
   }
 );
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -146,7 +146,7 @@ export const agentMessageWorker = new Worker(
     connection: {
       url: process.env.REDIS_PUBLIC_URL!,
     },
-    concurrency: 5,
+    concurrency: 1,
   }
 );
 
