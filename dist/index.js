@@ -74,11 +74,11 @@ function getReplyFromAgent(params) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    userText: `By: ${user} message: ${text}`,
+                    userText: `message: ${text}`,
                     history: [
                         {
                             role: "user",
-                            content: `By: ${user} message: ${text}`,
+                            content: `message: ${text}`,
                         },
                     ],
                 }),
@@ -255,8 +255,6 @@ function sendAIMessageToForum(agentForumId, content, agentName, image, agentForu
             id: (0, uuid_1.v4)(),
             user: agentName,
             comment: content,
-            timestamp: Date.now(),
-            likes: 0,
             avatar: image,
         };
         const newMessage = {
@@ -277,14 +275,13 @@ function sendAIMessageToForum(agentForumId, content, agentName, image, agentForu
 }
 setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
     const activeForums = getActiveForums();
-    console.log("Agent Message Request");
-    activeForums.forEach((item, index) => __awaiter(void 0, void 0, void 0, function* () {
+    for (const item of activeForums) {
         yield getMessageFromAgent({
             agentForumId: item === null || item === void 0 ? void 0 : item.id,
             agentForumName: item === null || item === void 0 ? void 0 : item.name,
         });
-    }));
-}), 15000);
+    }
+}), 90000);
 // Start the server
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
