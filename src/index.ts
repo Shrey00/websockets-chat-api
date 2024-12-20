@@ -102,11 +102,11 @@ async function getReplyFromAgent(params: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userText: `By: ${user} message: ${text}`,
+          userText: `message: ${text}`,
           history: [
             {
               role: "user",
-              content: `By: ${user} message: ${text}`,
+              content: `message: ${text}`,
             },
           ],
         }),
@@ -326,8 +326,6 @@ export function sendAIMessageToForum(
       id: uuidv4(),
       user: agentName,
       comment: content,
-      timestamp: Date.now(),
-      likes: 0,
       avatar: image,
     };
     const newMessage = {
@@ -348,12 +346,12 @@ export function sendAIMessageToForum(
 
 setInterval(async () => {
   const activeForums = getActiveForums();
-  activeForums.forEach(async (item, index) => {
+  for (const item of activeForums) {
     await getMessageFromAgent({
       agentForumId: item?.id!,
       agentForumName: item?.name!,
     });
-  });
+  }
 }, 90000);
 
 // Start the server
