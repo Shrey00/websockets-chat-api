@@ -348,14 +348,13 @@ export function sendAIMessageToForum(
 
 setInterval(async () => {
   const activeForums = getActiveForums();
-  console.log("Agent Message Request");
   activeForums.forEach(async (item, index) => {
     await getMessageFromAgent({
       agentForumId: item?.id!,
       agentForumName: item?.name!,
     });
   });
-}, 15000);
+}, 90000);
 
 // Start the server
 const PORT = process.env.PORT || 4000;
