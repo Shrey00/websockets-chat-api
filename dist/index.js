@@ -216,12 +216,12 @@ wss.on("connection", (ws, req) => {
                             console.log("Text: ", messageContent.comment);
                             saveMessages(forum.messages, messageContent);
                             broadcastToForum(forum, newMessage);
-                            // await getReplyFromAgent({
-                            //   user: message.messages[0].user,
-                            //   text: message.messages[0].comment!,
-                            //   agentForumId: message.agentForumId,
-                            //   agentForumName: message.agentForumName,
-                            // });
+                            yield getReplyFromAgent({
+                                user: message.messages[0].user,
+                                text: message.messages[0].comment,
+                                agentForumId: message.agentForumId,
+                                agentForumName: message.agentForumName,
+                            });
                         }
                     }
                     break;
@@ -275,16 +275,16 @@ function sendAIMessageToForum(agentForumId, content, agentName, image, agentForu
         console.warn(`Forum with id ${agentForumId} not found`);
     }
 }
-// setInterval(async () => {
-//   const activeForums = getActiveForums();
-//   console.log("Agent Message Request");
-//   activeForums.forEach(async (item, index) => {
-//     await getMessageFromAgent({
-//       agentForumId: item?.id!,
-//       agentForumName: item?.name!,
-//     });
-//   });
-// }, 15000);
+setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
+    const activeForums = getActiveForums();
+    console.log("Agent Message Request");
+    activeForums.forEach((item, index) => __awaiter(void 0, void 0, void 0, function* () {
+        yield getMessageFromAgent({
+            agentForumId: item === null || item === void 0 ? void 0 : item.id,
+            agentForumName: item === null || item === void 0 ? void 0 : item.name,
+        });
+    }));
+}), 15000);
 // Start the server
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
