@@ -167,7 +167,7 @@ async function getMessageFromAgent(params: {
           await response.json();
         if (replyText) {
           await redisConnection.rpush(
-            agentForumId,
+            "t-" + agentForumId,
             JSON.stringify({ replyText, agentName, image })
           );
           sendAIMessageToForum(
@@ -182,10 +182,10 @@ async function getMessageFromAgent(params: {
         const cachedAgentResponse = await getRandomResponse(agentForumId);
         const { replyText, agentName, image } = cachedAgentResponse;
         if (replyText) {
-          await redisConnection.rpush(
-            "t-" + agentForumId,
-            JSON.stringify({ replyText, agentName, image })
-          );
+          // await redisConnection.rpush(
+          //   "t-" + agentForumId,
+          //   JSON.stringify({ replyText, agentName, image })
+          // );
           sendAIMessageToForum(
             agentForumId,
             replyText,
