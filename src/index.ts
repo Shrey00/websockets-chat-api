@@ -114,13 +114,16 @@ async function getReplyFromAgent(params: {
     );
     const { replyText, ignore, reason, agentName, image } =
       await response.json();
-    sendAIMessageToForum(
-      agentForumId,
-      replyText,
-      agentName,
-      image,
-      agentForumName
-    );
+    console.log(replyText);
+    if (replyText) {
+      sendAIMessageToForum(
+        agentForumId,
+        replyText,
+        agentName,
+        image,
+        agentForumName
+      );
+    }
   } catch (e) {
     console.log(e);
   }
@@ -136,9 +139,9 @@ async function getMessageFromAgent(params: {
   if (isForumActive(agentForumId)) {
     //get number of saved LLM responses
     const MAX_SAVE_RESP = 4;
-    const currentCount = await redisConnection.llen(agentForumId);
+    const currentCount = await redisConnection.llen("t-" + agentForumId);
 
-    //if less than 15 store, fetch api,and save it in the redis list
+    //if less than 15 store, fetch aspi,and save it in the redis list
     //else use the redis list to get the saved response and use that to send randomly
     try {
       if (currentCount < MAX_SAVE_RESP) {
@@ -180,7 +183,7 @@ async function getMessageFromAgent(params: {
         const { replyText, agentName, image } = cachedAgentResponse;
         if (replyText) {
           await redisConnection.rpush(
-            agentForumId,
+            "t-" + agentForumId,
             JSON.stringify({ replyText, agentName, image })
           );
           sendAIMessageToForum(
@@ -326,6 +329,7 @@ export function sendAIMessageToForum(
       id: uuidv4(),
       user: agentName,
       comment: content,
+      timestamp: Date.now(),
       avatar: image,
     };
     const newMessage = {
